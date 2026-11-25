@@ -133,7 +133,7 @@ To build the actual fog, I made a function called FogDensity. This function take
 
 Before I could start on the fog, I had to have a render engine up and running in Vulkan. The Khronos Group has a lot of documentation on how to set up all the basics, but I prefer to have some sort of follow-along, where I can listen and see how someone else builds something. So I continued my search and found a tutorial series on YouTube by Brendan Galea. This tutorial series was a great help, and with it I built the full foundation of my render engine.
 
-The tutorial builds the engine one small step at a time. It starts with a single triangle, then moves on to sending small amounts of data to the shaders, drawing many triangles, and then the first 3D object, a spinning cube. After that came a camera that can be moved with the keyboard, loading 3D models, and finally simple lighting. The vases from the lighting part of the tutorial became the scene that I later filled with fog.
+The tutorial builds the engine one small step at a time. It starts with a single triangle, then moves on to sending small amounts of data to the shaders, drawing many triangles, and then the first 3D object, a spinning cube. After that came a camera that can be moved with the keyboard, loading 3D models, and finally simple lighting.
 
 ![Triangles moving on the screen, controlled by data sent to the shader](images/tutorial_push_constants.gif)
 
@@ -149,9 +149,9 @@ The tutorial builds the engine one small step at a time. It starts with a single
 
 ![Two white vases with diffuse lighting on a purple background](images/tutorial_vases_lighting.gif)
 
-*3D models with lighting. These vases became the scene for the fog.*
+*3D models with lighting.*
 
-### A prototype first
+### The prototype
 
 Before touching Vulkan, I built the fog in a single GLSL shader. I started the prototype in ShaderToy, but later switched over to VS Code, which has a ShaderToy extension. ShaderToy is a website where you write a single fragment shader and see the result right away. In ShaderToy, some functionality comes built in (like time and a camera), so the main focus can be on the actual math. I started with a ray marched sphere and floor, then added fog: first fog that was equally thick everywhere, then height fog.
 
@@ -173,7 +173,7 @@ Making a prototype first was an important choice. In Vulkan, a black screen can 
 
 The fog math moved over almost unchanged. The hard part was getting the right information to the shader. In ShaderToy the camera and the time are given for free, but in Vulkan I had to send them myself.
 
-First, the fog has to run for every pixel on the screen, not only for the pixels covered by the vases. To do this I draw one big triangle that covers the whole screen. Its fragment shader runs once for every pixel and does the ray march.
+First, the fog has to run for every pixel on the screen, not only for the pixels covered by the objects. To do this I draw one big triangle that covers the whole screen. Its fragment shader runs once for every pixel and does the ray march.
 
 Second, the shader needs to know where the camera is, which way each pixel looks, and what time it is. I send this from the C++ program to the shader every frame in a uniform buffer, which is a small block of memory that all the shaders can read. It contains the position of the camera, the direction to the sun, the time, and two matrices that turn a position on the screen into a direction in the world. With these, every pixel can work out its own ray.
 
@@ -239,7 +239,7 @@ This means that the must level and the goal level of the research question were 
 
 **What is missing:** the fog has no shadows, so there are no light shafts. All the fog gets the same amount of sunlight, even fog that should be in the shadow of a vase. I did try light shafts, using a shadow map, and they worked. But they needed a second render pass and a lot of new code that I could not explain well enough, so I chose to leave them out and keep a smaller result that I understand. The fog is also quite expensive, because every pixel takes 64 steps every frame.
 
-**If I started again:** I would most likely not start with Vulkan, since its verbosity made the process quite frustrating at times. OpenGL might be old, but it is still a fully working graphics API. Vulkan solves problems that someone new to computer graphics most likely will not run into, until they have mastered it and can clearly see its limitations. This, plus being fairly new to C++ made the whole process quite difficult.
+**If I started again:** I would most likely not start with Vulkan, since its verbosity made the process quite frustrating at times. OpenGL might be old, but it is still a fully working graphics API. Vulkan solves problems that someone new to computer graphics most likely will not run into, until they have mastered an older API, and can clearly see its limitations. This, plus being fairly new to C++ made the whole process quite difficult.
 
 **Next steps:** with more time I would add light shafts with a shadow map, use a better-looking noise such as Perlin or Worley/Voronoi noise, and calculate the fog at a lower resolution to make it faster.
 
