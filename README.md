@@ -2,7 +2,7 @@
 # Volumetric Fog in Vulkan
 
 ![Green hills with white fog filling the valley between them, under a light blue sky](images/introduction_picture.png)
-*Figure 1: The finished fog, filling a valley while the hilltops stay clear.*
+*The finished fog, filling a valley while the hilltops stay clear.*
 
 ## 1. Introduction
 
@@ -17,10 +17,10 @@ The word *volumetric* comes from *volume*, something that fills a space in 3D. W
 A good example of how much fog can mean for a game is the *Silent Hill* series. In the first game, the fog was partly a way to hide how short the original PlayStation could draw (PC Gamer, 2024), but it became the identity of the whole series, and *Silent Hill 2* from 2001 kept it. In the remake from 2024, the fog is volumetric: it lies in the streets, moves, and catches the light.
 
 ![A character walking into thick fog in the original Silent Hill 2](images/sh2-silent-hill-2.gif)
-*Figure 2: Silent Hill 2 (2001). The fog hides the end of the world and sets the mood.*
+*Silent Hill 2 (2001). The fog hides the end of the world and sets the mood.*
 
 ![A character standing in a foggy street in the Silent Hill 2 remake](images/sh2-silent-hill-2-remake.gif)
-*Figure 3: Silent Hill 2 remake (2024). The fog fills the space between the player and the street.*
+*Silent Hill 2 remake (2024). The fog fills the space between the player and the street.*
 
 In this project, I built volumetric fog in Vulkan, on top of the small engine from Brendan Galea's Vulkan tutorial series. I first made a prototype in a single shader, where I could focus on the math, and then moved it into my Vulkan engine.
 
@@ -133,31 +133,31 @@ Before I could start on the fog, I had to have a render engine up and running in
 The tutorial builds the engine one small step at a time. It starts with a single triangle, then moves on to sending small amounts of data to the shaders, drawing many triangles, and then the first 3D object, a spinning cube. After that came a camera that can be moved with the keyboard, loading 3D models, and finally simple lighting. The vases from the lighting part of the tutorial became the scene that I later filled with fog.
 
 ![Triangles moving on the screen, controlled by data sent to the shader](images/tutorial_push_constants.gif)
-*Figure 4: Sending small amounts of data to the shader every frame.*
+*Sending small amounts of data to the shader every frame.*
 
 ![A spinning cube with colored faces](images/tutorial_spinning_cube.gif)
-*Figure 5: The first 3D object in the tutorial.*
+*The first 3D object in the tutorial.*
 
 ![Moving around the scene with the keyboard](images/tutorial_camera_input.gif)
-*Figure 6: A camera that can be moved with the keyboard.*
+*A camera that can be moved with the keyboard.*
 
 ![Two white vases with diffuse lighting on a purple background](images/tutorial_vases_lighting.gif)
-*Figure 7: 3D models with lighting. These vases became the scene for the fog.*
+*3D models with lighting. These vases became the scene for the fog.*
 
 ### A prototype first
 
 Before touching Vulkan, I built the fog in a single GLSL shader. I started the prototype in ShaderToy, but later switched over to VS Code, which has a ShaderToy extension. ShaderToy is a website where you write a single fragment shader and see the result right away. In ShaderToy, some functionality comes built in (like time and a camera), so the main focus can be on the actual math. I started with a ray marched sphere and floor, then added fog: first fog that was equally thick everywhere, then height fog.
 
 ![The ShaderToy website with a ray marched sphere on the left and the shader code on the right](images/shaderToy.png)
-*Figure 8: ShaderToy. The result is on the left and the shader code is on the right.*
+*ShaderToy. The result is on the left and the shader code is on the right.*
 
 Making a prototype first was an important choice. In Vulkan, a black screen can be caused by hundreds of different settings. In the prototype, if something looked wrong, I knew it was the math. Later, when I moved the fog into Vulkan, and something looked wrong, I knew the math already worked, so the problem had to be in the Vulkan setup.
 
 ![A ray marched sphere and floor with lighting](images/shadertoy_raymarched_sphere.gif)
-*Figure 9: The ray marched sphere and floor, before any fog.*
+*The ray marched sphere and floor, before any fog.*
 
 ![A sphere standing in blue height fog](images/shadertoy_height_fog.gif)
-*Figure 10: Height fog in the prototype.*
+*Height fog in the prototype.*
 
 ### Moving the fog into Vulkan
 
@@ -170,12 +170,12 @@ Second, the shader needs to know where the camera is, which way each pixel looks
 At first, every pixel walked the same distance, so a vase close to the camera got as much fog as one far away.
 
 ![A row of vases where every vase has the same blue tint, close or far](images/vulkan_fog_fixed_walk.png)
-*Figure 11: The first fog in Vulkan. Every pixel walks the same distance, so all vases get the same amount of fog.*
+*The first fog in Vulkan. Every pixel walks the same distance, so all vases get the same amount of fog.*
 
 I fixed this by letting each object march only from the camera to itself. Close objects get a short walk and little fog, and far objects get a long walk and more fog. The big triangle over the whole screen is then only used for the background, where there is no object. To keep this simple, I put all the fog code in one shared file that both shaders include, so the fog looks the same on the objects and in the background.
 
 ![The row of vases, clear when close and fading into the fog when far](images/vulkan_fog_respects_depth.gif)
-*Figure 12: Close vases are clear, far ones fade into the fog.*
+*Close vases are clear, far ones fade into the fog.*
 
 ### Noise and light
 
@@ -194,13 +194,13 @@ One last problem was stripes. Because every pixel takes the same equal steps, th
 ## 5. Presentation
 
 ![Patchy, drifting ground fog with a glow towards the sun](images/final_fog.gif)
-*Figure 13: The final result.*
+*The final result.*
 
 To show the fog in a bigger scene, I also loaded a terrain with hills and valleys, made by Kris Teper. Because the fog depends on height, it fills the valleys while the hilltops stay clear. The video below compares three settings of the same fog, filmed from the same camera position:
 
 <video src="images/fog_comparison.mp4" autoplay loop muted playsinline width="100%"></video>
 
-*Video 1: Left: thick fog that stays low in the valleys. Middle: fog that reaches higher and covers the whole terrain more evenly. Right: the same fog with no height and no noise, which is the same as simple distance fog.*
+*Left: thick fog that stays low in the valleys. Middle: fog that reaches higher and covers the whole terrain more evenly. Right: the same fog with no height and no noise, which is the same as simple distance fog.*
 
 The right side shows why volumetric fog is needed. With simple distance fog, everything far away fades out equally, and the hilltops disappear just as much as the valleys.
 
@@ -208,7 +208,7 @@ Finally, a flight through the finished scene. The camera starts above the fog, d
 
 <video src="images/fog_flythrough.mp4" autoplay loop muted playsinline width="100%"></video>
 
-*Video 2: Flying through the fog over the terrain.*
+*Flying through the fog over the terrain.*
 
 The final fog:
 
