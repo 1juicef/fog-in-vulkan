@@ -338,7 +338,7 @@ This means that the must level and the goal level of the research question were 
 
 **If I started again:** I would most likely not start with Vulkan, since its verbosity made the process quite frustrating at times. OpenGL might be old, but it is still a fully working graphics API. Vulkan solves problems that someone new to computer graphics most likely will not run into, until they have mastered an older API, and can clearly see its limitations. This, plus being fairly new to C++ made the whole process quite difficult.
 
-**Next steps:** with more time I would add light shafts with a shadow map, use a better-looking noise such as Perlin or Worley/Voronoi noise, and calculate the fog in fewer pixels to make it faster.
+**Next steps:** with more time I would add light shafts with a shadow map, use a better-looking noise such as Perlin or Worley/Voronoi noise, and make calculations on speed and efficiency. 
 
 **Answer to the question:** you can make volumetric fog in Vulkan by ray marching through a fog density in the fragment shader, sending the camera and the time from the CPU to the shader in a uniform buffer, and using depth and blending to lay the fog correctly over the scene.
 
