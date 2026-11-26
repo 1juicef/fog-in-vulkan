@@ -15,7 +15,7 @@ Volumetric fog treats fog as something that exists in the space of the scene. Ea
 
 The word *volumetric* comes from *volume*, something that fills a space in 3D. With simple fog, only the surface of each object is looked at, and the only thing that matters is its distance from the camera. The air between the camera and the object is never part of the calculation. With volumetric fog, the fog lives *in the air*. Every point in the room has its own thickness, and everything between the camera and the object counts. This is what makes it possible for the fog to lie thick on the ground, be thin higher up, and be uneven, with thicker and thinner areas.
 
-A good example of how much fog can mean for a game is the *Silent Hill* series. In the first game, the fog was partly a way to hide how short the original PlayStation could draw (PC Gamer, 2024), but it became the identity of the whole series, and *Silent Hill 2* from 2001 kept it. In the remake from 2024, the fog is volumetric: it lies in the streets, moves, and catches the light.
+A good example of how much fog can mean for a game is the *Silent Hill* series. In the first game, the fog was partly a way to hide how short the original PlayStation could draw, but it became the identity of the whole series, and *Silent Hill 2* from 2001 kept it. In the remake from 2024, the fog is volumetric: it lies in the streets, moves, and catches the light.
 
 ![A character walking into thick fog in the original Silent Hill 2](images/sh2-silent-hill-2.gif)
 
@@ -25,7 +25,7 @@ A good example of how much fog can mean for a game is the *Silent Hill* series. 
 
 *Silent Hill 2 remake (2024). The fog fills the space between the player and the street.*
 
-In this project, I built volumetric fog in Vulkan, on top of the small engine from Brendan Galea's Vulkan tutorial series. I first made a prototype in a single shader, where I could focus on the math, and then moved it into my Vulkan engine.
+In this project, I built volumetric fog in Vulkan, on top of the small engine from Brendan Galea's Vulkan tutorial series.
 
 This project would be of interest to someone wanting the exact same result using Vulkan, but would also be helpful to someone wanting to use ray marching for some other shader end goal, since it's widely and commonly used.
 
@@ -33,9 +33,11 @@ This project would be of interest to someone wanting the exact same result using
 
 **How do you make volumetric fog in Vulkan?**
 
-The question is not only how fog is calculated, but how it is made to work inside a real Vulkan engine, with a moving camera, 3D objects and time. In a single shader, like in ShaderToy, the camera and the time come for free. In Vulkan, nothing is given for free, so the question also covers how the information gets from the C++ code on the CPU to the shader on the GPU, and how the fog is laid over the scene.
+The question is not only how fog is calculated, but how it is made to work inside a real Vulkan engine, with a moving camera, 3D objects and time. In Vulkan, nothing is given for free, so the question also covers how the information gets from the C++ code on the CPU to the shader on the GPU, and how the fog is laid over the scene.
 
-A good answer is needed because volumetric fog is used in many modern games to create mood and depth, and to control what the player can see. Simple distance fog cannot do this. There are many examples of fog in a single shader online, but few that show the whole way into a Vulkan engine. Since games have to draw around 60 images per second, the answer also needs to be fast enough to run in real time.
+Volumetric fog is used in many modern games to create mood and depth, and to control what the player can see. During my research, I found many examples of fog in a single shader online, and fog solutions built into specific game engines, but few that show the whole way into a Vulkan engine.
+
+My plan was to work in three steps. First, I learned the basics of Vulkan through Brendan Galea's tutorial series. Then I built a prototype of the fog in ShaderToy, a website for testing shaders, before moving it into my Vulkan engine. Last, I connected the fog to the camera, the objects and the time.
 
 I split the goal into three levels:
 
@@ -53,7 +55,7 @@ Volumetric fog has been a standard feature in big game engines for more than ten
 
 These solutions have a lot in common with mine. They all use the Beer–Lambert law to decide how much light gets through the fog, and they all let the fog add a little light of its own along the way. The difference is how the work is split up. The big engines divide the space in front of the camera into a 3D grid of small boxes, calculate the fog once for each box with compute shaders, and reuse the result from earlier frames. This is fast, but it needs a lot of setup.
 
-I took the same ideas but chose a simpler structure: ray marching once for every pixel, in the fragment shader. It costs more for every pixel, but it can be built and tested in a single shader, which made it possible to finish in the time I had. A possible next step would be to calculate the fog at a lower resolution. Since fog is soft and has no sharp edges, it does not need to be calculated in every pixel, which would make it much faster.
+I took the same ideas but chose a simpler structure: ray marching once for every pixel, in the fragment shader. It costs more for every pixel, but it was possible to finish in the time I had. The big engines also save time in another way: since fog is soft and has no sharp edges, it does not need to be calculated in every pixel.
 
 ### What is Vulkan?
 
@@ -65,10 +67,26 @@ In comparison to its predecessor OpenGL, Vulkan is a much more low-level API, a 
 
 Vulkan was derived from the Mantle API made by AMD and DICE, and it is created, maintained and evolved by The Khronos Group.
 
+Almost everything in Vulkan is created in the same way. First you fill in a "create info" struct that describes what you want. Then you hand that struct to a `vkCreate...` function, and check that it worked. The `sType` field tells Vulkan which kind of struct it is getting. This is how the pipeline layout for my fog is created:
+
+```cpp
+VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+pipelineLayoutInfo.pushConstantRangeCount = 0;
+pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create pipeline layout!");
+}
+```
+
+Buffers, images, shaders and the pipeline itself are all made with the same pattern. This is a big part of why Vulkan code gets so long: every object needs its own struct, and every field has to be filled in.
+
 ### Choosing a method
 
 There are a few ways to make fog. Particles are easy, but the fog is made of sprites, which can be seen when the camera moves through them. Simulating the fog with compute shaders is very realistic, but also very advanced. I chose **ray marching**: for every pixel, walk along its view ray in small steps and add up the fog it passes through. It is truly volumetric, and it can be tested in a single shader before building anything in Vulkan.
-
 
 ### The graphics pipeline
 
@@ -86,7 +104,7 @@ After the fragment shader comes the **Depth Test**. It keeps track of how close 
 
 The final stage is **Color Blending**, where the color of the new fragment is mixed with the color that is already in the image at the same pixel.
 
-Three of these stages matter most for the fog. The **fragment shader** is the most important, because that is where all of the fog math runs, once for every pixel. **Depth** matters because a close object should get less fog than a far one. And **blending** is how the fog is laid on top of the scene as a see-through layer.
+Three of these stages matter most for the fog. The **fragment shader** is the most important, because that is where all of the fog math runs, once for every pixel. **Depth** matters because the fog depends on how far away each object is. And **blending** is how the fog is laid on top of the scene as a see-through layer.
 
 ### How much light gets through fog
 
@@ -126,6 +144,23 @@ In short, normal ray marching answers *where* the surface is, while fog ray marc
 ### What builds the fog
 
 To build the actual fog, I made a function called FogDensity. This function takes a point in space and gives back a number: how thick the fog is right there. A larger number means thicker fog, and a smaller number means thinner fog. The number is largest close to the ground and gets smaller higher up. Before the number is returned, it is multiplied by noise. The noise makes the fog uneven, so it is thicker in some places and thinner in others.
+
+```glsl
+float FogDensity(vec3 position) {
+    // height: thick at the fog floor, thinner going up (+y is down in this engine)
+    float fogFloor = FOG_FLOOR_Y + sin(ubo.time * FOG_BREATHE_SPEED) * FOG_BREATHE_HEIGHT;
+    float heightAboveFloor = max(fogFloor - position.y, 0.0);
+    float heightFog = FOG_DENSITY * exp(-(heightAboveFloor * FOG_FALLOFF));
+
+    // noise: read it at a position that moves with the wind
+    vec3 noisePosition = position * NOISE_SCALE - WIND_VELOCITY * ubo.time;
+    float patches = smoothstep(.3, .75, LayeredNoise(noisePosition));
+
+    return heightFog * mix(1.0, patches * 2.0, NOISE_STRENGTH);
+}
+```
+
+The first part is the height. The fog floor moves slowly up and down with a sine wave, so the whole layer breathes. Above the floor, the density falls off with `exp`, so it fades smoothly instead of stopping at a hard line. The second part is the noise, which is explained under *Noise and light*. The two parts are multiplied, so the noise can make the fog patchy, but it can never lift fog up into the sky where the height part is already zero.
 
 ## 4. Knowledge sharing
 
@@ -171,11 +206,62 @@ Making a prototype first was an important choice. In Vulkan, a black screen can 
 
 ### Moving the fog into Vulkan
 
-The fog math moved over almost unchanged. The hard part was getting the right information to the shader. In ShaderToy the camera and the time are given for free, but in Vulkan I had to send them myself.
+The fog math moved over almost unchanged. The hard part was getting the right information to the shader. Everything ShaderToy had given me, like the camera and the time, I now had to send myself.
 
-First, the fog has to run for every pixel on the screen, not only for the pixels covered by the objects. To do this I draw one big triangle that covers the whole screen. Its fragment shader runs once for every pixel and does the ray march.
+First, the fog has to run for every pixel on the screen, not only for the pixels covered by the objects. To do this I draw one big triangle that covers the whole screen. Its fragment shader runs once for every pixel and does the ray march. The three corners are written directly in the vertex shader, so no vertex buffer is needed:
 
-Second, the shader needs to know where the camera is, which way each pixel looks, and what time it is. I send this from the C++ program to the shader every frame in a uniform buffer, which is a small block of memory that all the shaders can read. It contains the position of the camera, the direction to the sun, the time, and two matrices that turn a position on the screen into a direction in the world. With these, every pixel can work out its own ray.
+```glsl
+const vec2 TRIANGLE_CORNERS[3] = vec2[](
+    vec2(-1, -1),
+    vec2( 3, -1),
+    vec2(-1,  3)
+);
+
+void main() {
+    vec2 corner = TRIANGLE_CORNERS[gl_VertexIndex];
+    screenPosition = corner;
+    gl_Position = vec4(corner, 1, 1);
+}
+```
+
+The screen goes from -1 to 1 in both directions, so a triangle with corners at 3 reaches past the edges and covers all of it. In C++, drawing it is a single call: `vkCmdDraw(commandBuffer, 3, 1, 0, 0)`, which means three corners, drawn once.
+
+Second, the shader needs to know where the camera is, which way each pixel looks, and what time it is. I send this from the C++ program to the shader every frame in a uniform buffer, which is a small block of memory that all the shaders can read. It contains the position of the camera, the direction to the sun, the time, and two matrices that turn a position on the screen into a direction in the world. With these, every pixel can work out its own ray. The struct in C++ and the block in the shader must have the same fields in the same order, because the shader reads the memory exactly as C++ wrote it:
+
+```cpp
+struct GlobalUbo {
+    glm::mat4 projectionView{ 1.f };
+    glm::vec3 lightDirection = glm::normalize(glm::vec3(.3f, -.45f, 1.f));
+    float time;
+    glm::vec4 cameraPosition;
+    glm::mat4 inverseProjection;
+    glm::mat4 inverseView;
+};
+```
+
+```glsl
+layout(set = 0, binding = 0) uniform GlobalUniformBufferObject {
+    mat4 projectionViewMatrix;
+    vec3 directionToLight;
+    float time;
+    vec4 cameraPosition;
+    mat4 inverseProjection;
+    mat4 inverseView;
+} ubo;
+```
+
+The names do not have to match, only the types and the order. The `float time` is placed right after the `vec3` on purpose: the GPU reads the buffer in blocks of 16 bytes, and a `vec3` (12 bytes) plus a `float` (4 bytes) fill one block exactly.
+
+In the fragment shader, the two inverse matrices turn the pixel's position on the screen into a direction in the world. The projection matrix and the view matrix normally take a point from the world to the screen, so their inverses go the other way:
+
+```glsl
+vec3 GetRayDirection() {
+    vec4 rayOri = vec4(screenPosition, 1., 1.);
+    vec3 rayDir = (ubo.inverseProjection * rayOri).xyz;
+    vec3 worldDir = (ubo.inverseView * vec4(rayDir, 0.f)).xyz;
+    return normalize(worldDir);
+}
+```
 
 At first, every pixel walked the same distance, so a vase close to the camera got as much fog as one far away.
 
@@ -183,7 +269,18 @@ At first, every pixel walked the same distance, so a vase close to the camera go
 
 *The first fog in Vulkan. Every pixel walks the same distance, so all vases get the same amount of fog.*
 
-I fixed this by letting each object march only from the camera to itself. Close objects get a short walk and little fog, and far objects get a long walk and more fog. The big triangle over the whole screen is then only used for the background, where there is no object. To keep this simple, I put all the fog code in one shared file that both shaders include, so the fog looks the same on the objects and in the background.
+I fixed this by letting each object march only from the camera to itself. Close objects get a short walk and little fog, and far objects get a long walk and more fog. The big triangle over the whole screen is then only used for the background, where there is no object. This is done with two settings on the fog's pipeline:
+
+```cpp
+pipelineConfig.colorBlendAttachment.blendEnable = VK_TRUE;
+pipelineConfig.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+pipelineConfig.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+pipelineConfig.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+pipelineConfig.depthStencilInfo.depthWriteEnable = VK_FALSE;
+```
+
+The triangle is placed at depth 1, the far end of the depth range. Where an object was drawn, the depth buffer holds a smaller number, so the depth test hides the triangle there. Where nothing was drawn, the depth buffer still holds 1, and *less or equal* lets the triangle through. Blending then mixes the fog with what is behind it, using alpha: the more fog, the less of the background shows. To keep this simple, I put all the fog code in one shared file that both shaders include, so the fog looks the same on the objects and in the background.
 
 ![The row of vases, clear when close and fading into the fog when far](images/vulkan_fog_respects_depth.gif)
 
@@ -241,7 +338,7 @@ This means that the must level and the goal level of the research question were 
 
 **If I started again:** I would most likely not start with Vulkan, since its verbosity made the process quite frustrating at times. OpenGL might be old, but it is still a fully working graphics API. Vulkan solves problems that someone new to computer graphics most likely will not run into, until they have mastered an older API, and can clearly see its limitations. This, plus being fairly new to C++ made the whole process quite difficult.
 
-**Next steps:** with more time I would add light shafts with a shadow map, use a better-looking noise such as Perlin or Worley/Voronoi noise, and calculate the fog at a lower resolution to make it faster.
+**Next steps:** with more time I would add light shafts with a shadow map, use a better-looking noise such as Perlin or Worley/Voronoi noise, and calculate the fog in fewer pixels to make it faster.
 
 **Answer to the question:** you can make volumetric fog in Vulkan by ray marching through a fog density in the fragment shader, sending the camera and the time from the CPU to the shader in a uniform buffer, and using depth and blending to lay the fog correctly over the scene.
 
