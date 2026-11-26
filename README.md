@@ -188,7 +188,7 @@ The tutorial builds the engine one small step at a time. It starts with a single
 
 ### The prototype
 
-Before touching Vulkan, I built the fog in a single GLSL shader. I started the prototype in ShaderToy, but later switched over to VS Code, which has a ShaderToy extension. ShaderToy is a website where you write a single fragment shader and see the result right away. In ShaderToy, some functionality comes built in (like time and a camera), so the main focus can be on the actual math. I started with a ray marched sphere and floor, then added fog: first fog that was equally thick everywhere, then height fog.
+I started the prototype in ShaderToy. ShaderToy is a website where you write a single fragment shader and see the result right away. In ShaderToy, some functionality comes built in (like time and a camera), so the main focus can be on the actual math. I started with a ray marched sphere and floor, then added fog: first fog that was equally thick everywhere, then height fog.
 
 ![The ShaderToy website with a ray marched sphere on the left and the shader code on the right](images/shaderToy.png)
 
@@ -196,13 +196,13 @@ Before touching Vulkan, I built the fog in a single GLSL shader. I started the p
 
 Making a prototype first was an important choice. In Vulkan, a black screen can be caused by hundreds of different settings. In the prototype, if something looked wrong, I knew it was the math. Later, when I moved the fog into Vulkan, and something looked wrong, I knew the math already worked, so the problem had to be in the Vulkan setup.
 
-![A ray marched sphere and floor with lighting](images/shadertoy_raymarched_sphere.gif)
+<video src="images/shadertoy_raymarched_sphere.mp4" autoplay loop muted playsinline width="100%"></video>
 
 *The ray marched sphere and floor, before any fog.*
 
-![A sphere standing in blue height fog](images/shadertoy_height_fog.gif)
+<video src="images/shadertoy_height_fog.mp4" autoplay loop muted playsinline width="100%"></video>
 
-*Height fog in the prototype.*
+*Height fog in the prototype. After the first tests in ShaderToy, I moved the prototype over to VS Code with a GLSL preview and kept building it there.*
 
 ### Moving the fog into Vulkan
 
